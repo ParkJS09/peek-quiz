@@ -14,7 +14,7 @@ const ROOT = path.resolve(import.meta.dirname, '..');
 const ADMIN_PASSWORD = 'admin1234';
 const db = await createDb();
 
-const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml' };
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.webp': 'image/webp', '.svg': 'image/svg+xml' };
 
 const readBody = (req) => new Promise((resolve) => {
   const chunks = [];
@@ -64,7 +64,8 @@ http.createServer(async (req, res) => {
     if (!file.startsWith(ROOT) || rel.includes('/dev/') || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
       return send(res, 404, 'not found', 'text/plain');
     }
-    return send(res, 200, fs.readFileSync(file, 'utf8'), TYPES[path.extname(file)] || 'application/octet-stream');
+    res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream' });
+    return res.end(fs.readFileSync(file));
   } catch (err) {
     console.error(err);
     send(res, 500, { message: String(err) });

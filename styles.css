@@ -186,7 +186,7 @@ input[type="email"], input[type="password"], select {
 input[type="email"]:focus, input[type="password"]:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
 
 .join { text-align: center; }
-.join-icon { font-size: 40px; margin-bottom: 6px; }
+.join-avatar { display: block; width: 146px; height: 170px; margin: 0 auto 10px; image-rendering: pixelated; }
 .recover { margin-top: 18px; text-align: left; font-size: 13px; color: var(--muted); }
 .recover summary { cursor: pointer; }
 
@@ -273,3 +273,45 @@ button.tile:hover:not(:disabled) { border-color: var(--accent); }
 .penalty-info { font-size: 12px; color: var(--muted); margin-top: 4px; }
 .penalty-info b { color: var(--text); }
 .penalty-info .bad-text { color: var(--bad); }
+
+/* 브랜드: 제목 옆 도도란 */
+.brand { display: flex; align-items: center; gap: 8px; }
+.brand-avatar { width: 37px; height: 43px; image-rendering: pixelated; margin: -6px 0; }
+
+/* 정답 축하 */
+.celebrate {
+  position: fixed; inset: 0; z-index: 50; display: grid; place-items: center;
+  background: rgba(7, 8, 12, .78); overflow: hidden; animation: fadeIn .25s ease-out; cursor: pointer;
+}
+.cele-card { position: relative; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 16px; text-align: center; }
+.cele-avatar { width: 146px; height: 170px; image-rendering: pixelated; animation: hop .7s ease-out 2; }
+.cele-bubble {
+  position: relative; display: flex; flex-direction: column; gap: 2px;
+  background: #fff; color: #1a1400; border-radius: 14px; padding: 10px 16px; max-width: 300px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.35);
+}
+.cele-bubble::before {
+  content: ''; position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
+  border: 8px solid transparent; border-top: 0; border-bottom-color: #fff;
+}
+.cele-bubble b { font-size: 18px; }
+.cele-bubble span { font-size: 14px; }
+.cele-score { font-size: 34px; font-weight: 800; color: var(--accent); text-shadow: 0 2px 8px rgba(0,0,0,.5); animation: pop .5s ease-out; }
+.confetti { position: absolute; inset: 0; pointer-events: none; }
+.confetti i { position: absolute; top: -12px; width: 8px; height: 12px; border-radius: 2px; opacity: 0; animation: fall linear forwards; }
+@keyframes fall {
+  0% { opacity: 1; translate: 0 0; }
+  100% { opacity: .9; translate: 0 110vh; rotate: 540deg; }
+}
+@keyframes hop { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-18px); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .celebrate, .cele-avatar, .cele-score, .confetti i { animation: none; }
+  .confetti { display: none; }
+}
+.me-chip { white-space: nowrap; }
+@media (max-width: 520px) {
+  .top { padding: 10px 14px; gap: 10px; }
+  .top h1 { font-size: 15px; }
+  .brand-avatar { width: 30px; height: 35px; }
+}

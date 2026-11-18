@@ -8,7 +8,7 @@
 </head>
 <body>
   <header class="top">
-    <h1>🕵️ 탐정 도도란의 NPC 추리 게임</h1>
+    <h1 class="brand"><img src="assets/dodoran.png" alt="" class="brand-avatar">탐정 도도란의 NPC 추리 게임</h1>
     <button id="meChip" class="me-chip" hidden></button>
   </header>
 
@@ -20,7 +20,7 @@
   <!-- 닉네임 등록 -->
   <main id="view-join" class="page narrow" hidden>
     <section class="card join">
-      <div class="join-icon">🕳️👀</div>
+      <img class="join-avatar" src="assets/dodoran.png" alt="탐정 도도란" width="146" height="170">
       <h2>탐정님, 닉네임을 정하고 수사를 시작하세요</h2>
       <p class="muted">구멍으로 살짝 보이는 단서만 보고 어떤 NPC인지 추리하는 게임이에요.<br>
         단서(구멍)를 적게 볼수록 점수가 높아요. 단, 틀리면 감점돼요!</p>
@@ -48,6 +48,18 @@
     <section class="stage-wrap">
       <div class="canvas-box play-box" id="playBox">
         <img id="playImg" alt="퀴즈 이미지">
+        <div id="celebrate" class="celebrate" hidden>
+          <div class="confetti" id="confetti"></div>
+          <div class="cele-card">
+            <img src="assets/dodoran.png" alt="탐정 도도란" class="cele-avatar">
+            <div class="cele-bubble">
+              <b id="celeTitle"></b>
+              <span id="celeMsg"></span>
+            </div>
+            <div class="cele-score" id="celeScore"></div>
+            <button type="button" class="btn primary" id="celeClose">정답 그림 보기</button>
+          </div>
+        </div>
       </div>
     </section>
     <aside class="panel">

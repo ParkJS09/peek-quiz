@@ -147,7 +147,40 @@ function tile(q, slot) {
 }
 
 // ---------- 문제 풀기 ----------
+// ---------- 정답 축하 ----------
+const CHEERS = [
+  // 힌트를 적게 볼수록 더 크게 칭찬해요
+  { max: 0.2, title: '천재 탐정 등장!', msgs: ['단서 하나로 맞히다니… 제 자리가 위험한데요?', '이건 명탐정의 감이에요!'] },
+  { max: 0.5, title: '명추리예요!', msgs: ['역시 날카로운 눈썰미!', '도도란도 감탄했어요!'] },
+  { max: 0.8, title: '사건 해결!', msgs: ['차근차근 추리한 보람이 있네요!', '훌륭한 수사였어요!'] },
+  { max: 1, title: '찾았다!', msgs: ['끝까지 포기하지 않는 탐정 정신!', '마지막 단서까지 꼼꼼했어요!'] },
+];
+
+function celebrate(st) {
+  const ratio = st.hints_used / st.hole_count;
+  const tier = CHEERS.find((c) => ratio <= c.max) || CHEERS[CHEERS.length - 1];
+  $('#celeTitle').textContent = tier.title;
+  $('#celeMsg').textContent = tier.msgs[Math.floor(Math.random() * tier.msgs.length)];
+  $('#celeScore').textContent = `+${st.score}점`;
+  const colors = ['#ffcf4a', '#4ade80', '#60a5fa', '#f472b6', '#c084fc'];
+  $('#confetti').replaceChildren(...Array.from({ length: 36 }, (_, i) => {
+    const s = document.createElement('i');
+    s.style.left = `${Math.random() * 100}%`;
+    s.style.background = colors[i % colors.length];
+    s.style.animationDelay = `${Math.random() * 0.6}s`;
+    s.style.animationDuration = `${1.6 + Math.random() * 1.2}s`;
+    s.style.transform = `rotate(${Math.random() * 360}deg)`;
+    return s;
+  }));
+  $('#celebrate').hidden = false;
+}
+
+const closeCelebrate = () => { $('#celebrate').hidden = true; };
+$('#celeClose').addEventListener('click', closeCelebrate);
+$('#celebrate').addEventListener('click', (e) => { if (e.target.id === 'celebrate') closeCelebrate(); });
+
 async function openPlay(quizId) {
+  closeCelebrate();
   try {
     const st = await rpc('open_play', { p_token: player.token, p_quiz: quizId });
     current = null;
@@ -230,6 +263,7 @@ $('#guessForm').addEventListener('submit', async (e) => {
   const lost = (current?.score_now ?? 0) - (st.score_now ?? 0);
   if (st.correct) {
     setFeedback(`🎉 정답! 힌트 ${st.hints_used}개 만에 맞혀서 ${st.score}점을 얻었어요`, 'good');
+    celebrate(st);
     refreshMe();
   } else {
     setFeedback(`땡! 정답이 아니에요 (${guess})${lost > 0 ? ` · -${lost}점` : ''}`, 'bad');

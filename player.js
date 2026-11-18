@@ -48,6 +48,11 @@ $('#joinForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const nick = $('#nickInput').value.trim();
   if (nick.length < 2) { toast(ERRORS.NICK_LENGTH); return; }
+  if (hasProfanity(nick)) {
+    brand?.scold('욕하지 마! 😤\n닉네임은 고운 말로 지어 주세요.');
+    $('#nickInput').select();
+    return;
+  }
   try {
     const r = await rpc('register_player', { p_nickname: nick });
     savePlayer({ token: r.token, nickname: r.nickname });
@@ -258,6 +263,13 @@ $('#guessForm').addEventListener('submit', async (e) => {
   const input = $('#guessInput');
   const guess = input.value.trim();
   if (!guess) return;
+  if (hasProfanity(guess)) {
+    // 욕은 채점하지 않아요(감점도 없음)
+    brand?.scold('욕하지 마! 😤\n{탐정}은 고운 말만 쓰는 거예요.');
+    input.value = '';
+    input.focus();
+    return;
+  }
   const st = await act('submit_answer', { p_guess: guess });
   if (!st) return;
   const lost = (current?.score_now ?? 0) - (st.score_now ?? 0);

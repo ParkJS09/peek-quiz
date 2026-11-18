@@ -13,6 +13,7 @@ const ERRORS = {
   NICK_TAKEN: '이미 사용 중인 닉네임이에요.',
   NICK_LENGTH: '닉네임은 2~12자로 정해 주세요.',
   NICK_INVALID: '닉네임에 쓸 수 없는 문자가 있어요.',
+  NICK_PROFANE: '욕설이 들어간 닉네임은 쓸 수 없어요.',
   BAD_TOKEN: '플레이어 정보를 찾을 수 없어요. 복구 코드를 확인해 주세요.',
   NOT_OPEN: '아직 열리지 않은 문제예요.',
   NOT_STARTED: '문제를 다시 열어 주세요.',
@@ -313,5 +314,41 @@ function initBrand(lines, greeting, getName = () => null) {
     setTimeout(() => say(greeting), 700);
   }
 
-  return { say: (text, ms) => { if (!nudging) bubble.classList.remove('nudge-bubble'); say(text, ms); } };
+  return {
+    say: (text, ms) => {
+      bubble.classList.remove('angry-bubble');
+      if (!nudging) bubble.classList.remove('nudge-bubble');
+      say(text, ms);
+    },
+    // 욕을 입력했을 때: 빨간 말풍선 + 화난 흔들림
+    scold: (text) => {
+      bubble.classList.remove('nudge-bubble');
+      bubble.classList.add('angry-bubble');
+      lens.classList.remove('angry');
+      void lens.offsetWidth;
+      lens.classList.add('angry');
+      say(text, 3000);
+      setTimeout(() => bubble.classList.remove('angry-bubble'), 3000);
+    },
+  };
+}
+
+// ---------- 욕설 감지 ----------
+// 띄어쓰기, 숫자, 기호를 섞어 써도 잡히도록 글자만 남겨서 비교해요.
+const PROFANITY = [
+  '시발', '씨발', '씨빨', '시빨', '씨바', '시바알', '씨팔', '시팔', '쓰발', '쒸발', 'ㅅㅂ', 'ㅆㅂ', 'ㅅㅂㄹㅁ',
+  '병신', '븅신', '빙신', '병쉰', 'ㅂㅅ', 'ㅄ',
+  '좆', '좃같', '족같', 'ㅈ같', '존나', '졸라', 'ㅈㄴ',
+  '개새끼', '개새기', '개색기', '개색히', '개세끼', 'ㄱㅅㄲ', '새끼야',
+  '지랄', 'ㅈㄹ', '염병', '미친놈', '미친년', '미친새끼', '썅', '닥쳐', '꺼져', '엿먹어',
+  'fuck', 'shit', 'bitch', 'asshole',
+];
+// 욕이 들어 있지만 욕이 아닌 낱말(먼저 지우고 검사해요)
+const PROFANITY_ALLOW = ['시발점', '시발역', '시바견', '시바이누', '병신년', '병신양요'];
+
+function hasProfanity(text) {
+  let t = String(text || '').toLowerCase().replace(/[^0-9a-z가-힣ㄱ-ㅎㅏ-ㅣ]/g, '');
+  PROFANITY_ALLOW.forEach((w) => { t = t.replaceAll(w, ''); });
+  t = t.replace(/[0-9]/g, '');
+  return PROFANITY.some((w) => t.includes(w));
 }

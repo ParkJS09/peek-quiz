@@ -111,6 +111,30 @@ language sql immutable as $$
   select greatest(p_base - p_penalty, greatest(1, round(p_base * 0.10)::int))
 $$;
 
+-- 욕설 감지: 글자만 남기고(띄어쓰기/숫자/기호 무시) 금지어가 들어 있는지 봐요.
+-- 브라우저(common.js의 PROFANITY)와 같은 목록을 유지해 주세요.
+create or replace function public._has_profanity(t text) returns boolean
+language plpgsql immutable as $$
+declare
+  s text := regexp_replace(lower(coalesce(t, '')), '[^0-9a-z가-힣ㄱ-ㅎㅏ-ㅣ]', '', 'g');
+  w text;
+begin
+  foreach w in array array['시발점', '시발역', '시바견', '시바이누', '병신년', '병신양요'] loop
+    s := replace(s, w, '');
+  end loop;
+  s := regexp_replace(s, '[0-9]', '', 'g');
+  foreach w in array array[
+    '시발', '씨발', '씨빨', '시빨', '씨바', '시바알', '씨팔', '시팔', '쓰발', '쒸발', 'ㅅㅂ', 'ㅆㅂ', 'ㅅㅂㄹㅁ',
+    '병신', '븅신', '빙신', '병쉰', 'ㅂㅅ', 'ㅄ',
+    '좆', '좃같', '족같', 'ㅈ같', '존나', '졸라', 'ㅈㄴ',
+    '개새끼', '개새기', '개색기', '개색히', '개세끼', 'ㄱㅅㄲ', '새끼야',
+    '지랄', 'ㅈㄹ', '염병', '미친놈', '미친년', '미친새끼', '썅', '닥쳐', '꺼져', '엿먹어',
+    'fuck', 'shit', 'bitch', 'asshole'] loop
+    if position(w in s) > 0 then return true; end if;
+  end loop;
+  return false;
+end $$;
+
 create or replace function public._player(p_token text) returns public.players
 language plpgsql stable security definer set search_path = public as $$
 declare v public.players;
@@ -183,6 +207,7 @@ declare
 begin
   if char_length(v_nick) < 2 or char_length(v_nick) > 12 then raise exception 'NICK_LENGTH'; end if;
   if v_nick ~ '[[:cntrl:]]' then raise exception 'NICK_INVALID'; end if;
+  if _has_profanity(v_nick) then raise exception 'NICK_PROFANE'; end if;
   begin
     insert into players (nickname, token_hash) values (v_nick, _hash(v_token));
   exception when unique_violation then
@@ -483,7 +508,7 @@ begin
     select p.oid::regprocedure as sig
       from pg_proc p join pg_namespace n on n.oid = p.pronamespace
      where n.nspname = 'public'
-       and p.proname in ('_norm', '_hash', '_base_score', '_wrong_penalty', '_final_score', '_player', '_is_admin', '_require_admin', '_open_quiz', '_play_state',
+       and p.proname in ('_norm', '_hash', '_has_profanity', '_base_score', '_wrong_penalty', '_final_score', '_player', '_is_admin', '_require_admin', '_open_quiz', '_play_state',
                          'register_player', 'me', 'list_quizzes', 'open_play', 'next_hint', 'submit_answer',
                          'give_up', 'leaderboard', 'admin_whoami', 'admin_list', 'admin_save_quiz',
                          'admin_put_image', 'admin_get_image', 'admin_set_open', 'admin_delete_quiz',

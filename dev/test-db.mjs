@@ -41,6 +41,15 @@ await t('닉네임 등록: 길이, 중복(대소문자 무시) 검사', async ()
   await fails(db.rpc('register_player', { p_nickname: 'a' }, ANON), 'NICK_LENGTH');
   await fails(db.rpc('register_player', { p_nickname: 'x'.repeat(13) }, ANON), 'NICK_LENGTH');
   assert.equal((await db.rpc('me', { p_token: tokA }, ANON)).nickname, 'Alice');
+  for (const bad of ['시발', '씨 1 발', 'ㅅㅂ탐정', '병신', '좆같네', 'FuckYou', '개새끼야']) {
+    await fails(db.rpc('register_player', { p_nickname: bad }, ANON), 'NICK_PROFANE');
+  }
+  const okNames = ['시발점여행', '시바견러버', '광부유령'];
+  for (const ok of okNames) await db.rpc('register_player', { p_nickname: ok }, ANON);
+  // 뒤 테스트의 인원수에 섞이지 않게 정리
+  for (const p of await db.rpc('admin_list_players', {}, ADMIN)) {
+    if (okNames.includes(p.nickname)) await db.rpc('admin_delete_player', { p_player: p.id }, ADMIN);
+  }
   await fails(db.rpc('me', { p_token: 'nope' }, ANON), 'BAD_TOKEN');
 });
 

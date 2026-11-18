@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>구멍 엿보기 퀴즈</title>
+  <title>탐정 도도란의 NPC 추리 게임</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <header class="top">
-    <h1>🔍 구멍 엿보기 퀴즈</h1>
+    <h1>🕵️ 탐정 도도란의 NPC 추리 게임</h1>
     <button id="meChip" class="me-chip" hidden></button>
   </header>
 
@@ -21,8 +21,9 @@
   <main id="view-join" class="page narrow" hidden>
     <section class="card join">
       <div class="join-icon">🕳️👀</div>
-      <h2>닉네임을 정하고 시작하세요</h2>
-      <p class="muted">구멍으로 살짝 보이는 그림이 무엇인지 맞히는 게임이에요.<br>힌트(구멍)를 적게 볼수록 점수가 높아요.</p>
+      <h2>탐정님, 닉네임을 정하고 수사를 시작하세요</h2>
+      <p class="muted">구멍으로 살짝 보이는 단서만 보고 어떤 NPC인지 추리하는 게임이에요.<br>
+        단서(구멍)를 적게 볼수록 점수가 높아요. 단, 틀리면 감점돼요!</p>
       <form id="joinForm" class="stack">
         <input id="nickInput" type="text" maxlength="12" placeholder="닉네임 (2~12자)" autocomplete="off">
         <button class="btn primary" type="submit">시작하기</button>
@@ -56,9 +57,10 @@
       <div class="score-box">
         <div class="muted small" id="scoreCaption"></div>
         <div class="score" id="score"></div>
+        <div class="penalty-info" id="penaltyInfo"></div>
       </div>
       <form id="guessForm" class="guess">
-        <input id="guessInput" type="text" placeholder="정답을 입력하세요" autocomplete="off">
+        <input id="guessInput" type="text" placeholder="이 NPC의 이름은?" autocomplete="off">
         <button class="btn primary" type="submit">제출</button>
       </form>
       <div id="feedback" class="feedback" aria-live="polite"></div>

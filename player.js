@@ -179,6 +179,10 @@ function applyState(st) {
     `<i class="${done ? (st.status === 'solved' ? 'end' : 'gone') : i < st.hints_used ? 'on' : ''}"></i>`).join('');
   $('#scoreCaption').textContent = done ? '획득 점수' : '지금 맞히면';
   $('#score').textContent = `${done ? st.score : st.score_now}점`;
+  const pen = st.penalty > 0 ? `오답 감점 -${st.penalty}점` : '';
+  $('#penaltyInfo').innerHTML = done
+    ? esc(pen)
+    : [`<span>오답 1번에 <b>-${st.wrong_cost}점</b></span>`, pen && `<span class="bad-text">${pen}</span>`].filter(Boolean).join(' · ');
 
   $('#guessForm').hidden = done;
   $('#nextBtn').hidden = done;
@@ -223,11 +227,12 @@ $('#guessForm').addEventListener('submit', async (e) => {
   if (!guess) return;
   const st = await act('submit_answer', { p_guess: guess });
   if (!st) return;
+  const lost = (current?.score_now ?? 0) - (st.score_now ?? 0);
   if (st.correct) {
     setFeedback(`🎉 정답! 힌트 ${st.hints_used}개 만에 맞혀서 ${st.score}점을 얻었어요`, 'good');
     refreshMe();
   } else {
-    setFeedback(`땡! 정답이 아니에요 (${guess})`, 'bad');
+    setFeedback(`땡! 정답이 아니에요 (${guess})${lost > 0 ? ` · -${lost}점` : ''}`, 'bad');
     const box = $('#playBox');
     box.classList.remove('shake');
     void box.offsetWidth;

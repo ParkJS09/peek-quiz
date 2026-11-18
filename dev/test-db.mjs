@@ -81,9 +81,12 @@ await t('다음 힌트는 하나씩, 구멍 수를 넘지 않는다', async () =
   assert.equal(st.score_now, 67);
 });
 
-await t('오답은 점수 0, 너무 빠른 연속 제출은 막힌다', async () => {
+await t('오답은 남은 구멍 수만큼 감점, 너무 빠른 연속 제출은 막힌다', async () => {
   const st = await db.rpc('submit_answer', { p_token: tokA, p_quiz: q1, p_guess: '유령' }, ANON);
   assert.equal(st.correct, false);
+  assert.equal(st.penalty, 2, '구멍 3개 중 힌트 2개 단계에서 오답 → -2');
+  assert.equal(st.score_now, 65);
+  assert.equal(st.wrong_cost, 2);
   assert.equal(st.status, 'playing');
   assert.equal(st.answer, null);
   await fails(db.rpc('submit_answer', { p_token: tokA, p_quiz: q1, p_guess: '광부' }, ANON), 'TOO_FAST');
@@ -94,11 +97,11 @@ await t('정답(띄어쓰기/문장부호 무시) → 점수 저장, 원본 공�
   const st = await db.rpc('submit_answer', { p_token: tokA, p_quiz: q1, p_guess: '광부  유령!!' }, ANON);
   assert.equal(st.correct, true);
   assert.equal(st.status, 'solved');
-  assert.equal(st.score, 67);
+  assert.equal(st.score, 65, '67 − 감점 2');
   assert.equal(st.image, IMG(0));
   assert.equal(st.answer, '광부 유령');
   const after = await db.rpc('next_hint', { p_token: tokA, p_quiz: q1 }, ANON);
-  assert.equal(after.score, 67, '푼 뒤에는 점수가 바뀌지 않음');
+  assert.equal(after.score, 65, '푼 뒤에는 점수가 바뀌지 않음');
 });
 
 await t('대체 정답과 영문 대소문자도 인정', async () => {
@@ -124,11 +127,11 @@ await t('포기하면 0점이고 정답이 보인다', async () => {
 
 await t('랭킹: 총점 순, 내 정보 합계', async () => {
   const lb = await db.rpc('leaderboard', { p_limit: 10 }, ANON);
-  assert.deepEqual(lb.map((r) => [r.rank, r.nickname, r.total, r.solved]), [[1, 'Alice', 167, 2], [2, '밥돌이', 100, 1]]);
+  assert.deepEqual(lb.map((r) => [r.rank, r.nickname, r.total, r.solved]), [[1, 'Alice', 165, 2], [2, '밥돌이', 100, 1]]);
   const me = await db.rpc('me', { p_token: tokA }, ANON);
-  assert.equal(me.total, 167);
+  assert.equal(me.total, 165);
   const list = await db.rpc('list_quizzes', { p_token: tokA }, ANON);
-  assert.deepEqual(list.map((q) => [q.status, q.score]), [['solved', 67], ['solved', 100]]);
+  assert.deepEqual(list.map((q) => [q.status, q.score]), [['solved', 65], ['solved', 100]]);
 });
 
 await t('플레이한 사람이 있으면 구멍/이미지는 못 바꾸고 정답은 바꿀 수 있다', async () => {
@@ -145,7 +148,51 @@ await t('비공개로 돌리면 다시 막히고, 삭제하면 점수도 사라�
   await db.rpc('admin_set_open', { p_quiz: q2, p_open: false }, ADMIN);
   await fails(db.rpc('open_play', { p_token: tokB, p_quiz: q2 }, ANON), 'NOT_OPEN');
   await db.rpc('admin_delete_quiz', { p_quiz: q2 }, ADMIN);
-  assert.equal((await db.rpc('me', { p_token: tokA }, ANON)).total, 67);
+  assert.equal((await db.rpc('me', { p_token: tokA }, ANON)).total, 65);
+});
+
+await t('초기화/플레이어 관리는 운영자만 할 수 있다', async () => {
+  for (const [fn, args] of [['admin_reset_quiz', { p_quiz: q1 }], ['admin_reset_all', { p_players: true }],
+    ['admin_list_players', {}], ['admin_delete_player', { p_player: q1 }]]) {
+    await fails(db.rpc(fn, args, ANON), 'permission denied');
+    await fails(db.rpc(fn, args, STRANGER), 'NOT_ADMIN');
+  }
+});
+
+await t('플레이어 목록과 한 명 삭제', async () => {
+  const tokC = (await db.rpc('register_player', { p_nickname: '테스트계정' }, ANON)).token;
+  let list = await db.rpc('admin_list_players', {}, ADMIN);
+  assert.deepEqual(list.map((p) => [p.nickname, p.total, p.solved]), [['Alice', 65, 1], ['밥돌이', 100, 1], ['테스트계정', 0, 0]].sort((a, b) => b[1] - a[1]));
+  const c = list.find((p) => p.nickname === '테스트계정');
+  await db.rpc('admin_delete_player', { p_player: c.id }, ADMIN);
+  await fails(db.rpc('me', { p_token: tokC }, ANON), 'BAD_TOKEN');
+  await db.rpc('register_player', { p_nickname: '테스트계정' }, ANON); // 닉네임을 다시 쓸 수 있음
+});
+
+await t('문제별 기록 초기화 → 점수 사라지고 구멍 수정 가능', async () => {
+  assert.equal(await db.rpc('admin_reset_quiz', { p_quiz: q1 }, ADMIN), 2);
+  assert.equal((await db.rpc('me', { p_token: tokA }, ANON)).total, 0);
+  await db.rpc('admin_save_quiz', { p_id: q1, p_day: 1, p_slot: 1, p_title: '', p_answers: ['x'], p_holes: holes.slice(0, 2) }, ADMIN);
+  const st = await db.rpc('open_play', { p_token: tokA, p_quiz: q1 }, ANON);
+  assert.equal(st.status, 'playing');
+});
+
+await t('전체 초기화: 점수만 / 플레이어까지', async () => {
+  let r = await db.rpc('admin_reset_all', { p_players: false }, ADMIN);
+  assert.equal(r.plays, 1);
+  assert.equal(r.players, 0);
+  assert.equal((await db.rpc('me', { p_token: tokA }, ANON)).total, 0);
+  assert.deepEqual(await db.rpc('leaderboard', {}, ANON), []);
+  r = await db.rpc('admin_reset_all', { p_players: true }, ADMIN);
+  assert.equal(r.players, 3);
+  await fails(db.rpc('me', { p_token: tokA }, ANON), 'BAD_TOKEN');
+  assert.equal((await db.rpc('admin_list', {}, ADMIN)).length, 1, '문제는 남아 있음');
+});
+
+await t('감점 규칙: 구멍 5개면 5,4,3,2,1 / 맞히면 최소 10% 보장', async () => {
+  const r = (await db.pg.query(`select array[_wrong_penalty(5,1), _wrong_penalty(5,2), _wrong_penalty(5,3),
+      _wrong_penalty(5,4), _wrong_penalty(5,5)] p, _final_score(100, 40) e, _final_score(100, 500) f, _final_score(5, 9) g`)).rows[0];
+  assert.deepEqual(r, { p: [5, 4, 3, 2, 1], e: 60, f: 10, g: 1 });
 });
 
 console.log(`\n${passed}개 테스트 통과`);

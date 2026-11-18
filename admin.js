@@ -6,9 +6,23 @@ let quizzes = [];
 
 // ---------- 화면 전환 ----------
 function show(view) {
-  ['login', 'board', 'edit'].forEach((v) => { $(`#view-${v}`).hidden = v !== view; });
+  ['login', 'board', 'players', 'edit'].forEach((v) => { $(`#view-${v}`).hidden = v !== view; });
   $('#logoutBtn').hidden = view === 'login';
+  $('#adminTabs').hidden = !['board', 'players'].includes(view);
+  $$('#adminTabs .tab').forEach((t) => t.classList.toggle('active', t.dataset.view === view));
   window.scrollTo(0, 0);
+}
+
+$$('#adminTabs .tab').forEach((t) => t.addEventListener('click', () => {
+  if (t.dataset.view === 'players') openPlayers(); else openBoard();
+}));
+
+// 되돌릴 수 없는 작업은 단어를 직접 입력해야 진행돼요.
+function confirmTyped(message, word = '초기화') {
+  const v = prompt(`${message}\n\n계속하려면 "${word}"라고 입력하세요.`);
+  if (v === null) return false;
+  if (v.trim() !== word) { toast('입력한 단어가 달라서 취소했어요'); return false; }
+  return true;
 }
 
 function onError(err) {
@@ -95,8 +109,17 @@ function adminTile(q, day, slot) {
     <div class="tile-actions">
       <button class="btn small-btn" data-act="edit">편집</button>
       <button class="btn small-btn ${q.is_open ? '' : 'primary'}" data-act="toggle">${q.is_open ? '비공개로' : '공개'}</button>
+      ${q.players > 0 ? '<button class="btn small-btn ghost" data-act="reset">기록 초기화</button>' : ''}
       <button class="btn small-btn ghost" data-act="del">삭제</button>
     </div>`;
+  div.querySelector('[data-act=reset]')?.addEventListener('click', async () => {
+    if (!confirm(`DAY ${q.day} 문제 ${q.slot}의 플레이 기록 ${q.players}건을 지울까요?\n이 문제로 얻은 점수가 모두 사라지고, 플레이어는 처음부터 다시 풀 수 있어요. 문제는 그대로 남아요.`)) return;
+    try {
+      const n = await adminRpc('admin_reset_quiz', { p_quiz: q.id });
+      toast(`기록 ${n}건을 지웠어요`);
+      await openBoard();
+    } catch (err) { onError(err); }
+  });
   div.querySelector('[data-act=edit]').addEventListener('click', () => openEditor(q));
   div.querySelector('[data-act=toggle]').addEventListener('click', async () => {
     const open = !q.is_open;
@@ -115,6 +138,47 @@ function adminTile(q, day, slot) {
   });
   return div;
 }
+
+// ---------- 플레이어 관리 / 전체 초기화 ----------
+async function openPlayers() {
+  let players;
+  try { players = await adminRpc('admin_list_players'); } catch (err) { onError(err); return; }
+  show('players');
+  $('#playerCount').textContent = `${players.length}명`;
+  $('#playerEmpty').hidden = players.length > 0;
+  $('#playerBody').replaceChildren(...players.map((p) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${esc(p.nickname)}</td><td>${p.played}</td><td>${p.solved}</td>
+      <td class="pts">${p.total}</td>
+      <td class="row-act"><button class="btn small-btn ghost">삭제</button></td>`;
+    tr.querySelector('button').addEventListener('click', async () => {
+      if (!confirm(`"${p.nickname}"을(를) 삭제할까요? 점수 ${p.total}점도 함께 사라져요.`)) return;
+      try { await adminRpc('admin_delete_player', { p_player: p.id }); toast(`${p.nickname}을(를) 삭제했어요`); await openPlayers(); }
+      catch (err) { onError(err); }
+    });
+    return tr;
+  }));
+}
+
+$('#playersRefresh').addEventListener('click', openPlayers);
+
+$('#resetScores').addEventListener('click', async () => {
+  if (!confirmTyped('모든 플레이어의 풀이 기록과 점수를 지워요. 닉네임과 문제는 남아요.')) return;
+  try {
+    const r = await adminRpc('admin_reset_all', { p_players: false });
+    toast(`풀이 기록 ${r.plays}건을 지웠어요`);
+    await openPlayers();
+  } catch (err) { onError(err); }
+});
+
+$('#resetEverything').addEventListener('click', async () => {
+  if (!confirmTyped('모든 플레이어(닉네임)와 점수를 지워요. 문제는 남아요.')) return;
+  try {
+    const r = await adminRpc('admin_reset_all', { p_players: true });
+    toast(`플레이어 ${r.players}명, 풀이 기록 ${r.plays}건을 지웠어요`);
+    await openPlayers();
+  } catch (err) { onError(err); }
+});
 
 // ---------- 편집기 ----------
 const ed = {
@@ -459,7 +523,8 @@ function renderPreview() {
   } else {
     drawStage(ctx, ed.base, ed.holes, pv.stage);
     const score = Math.round((100 * (n - pv.stage + 1)) / n);
-    $('#previewLabel').textContent = `힌트 ${pv.stage} / ${n} · 지금 맞히면 ${score}점`;
+    const cost = n - pv.stage + 1;
+    $('#previewLabel').textContent = `힌트 ${pv.stage} / ${n} · 지금 맞히면 ${score}점 · 오답 -${cost}점`;
   }
   $('#prevStage').disabled = pv.stage <= 1;
   $('#nextStage').disabled = pv.stage > n;

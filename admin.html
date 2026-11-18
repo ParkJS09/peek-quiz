@@ -4,12 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
-  <title>퀴즈 운영자</title>
+  <title>운영자 · 탐정 도도란의 NPC 추리 게임</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <header class="top">
-    <h1>🔍 퀴즈 운영자</h1>
+    <h1>🕵️ 탐정 도도란 · 운영자</h1>
     <div class="top-right">
       <a href="./" class="link" target="_blank">플레이어 화면 열기 ↗</a>
       <button id="logoutBtn" class="btn ghost small-btn" hidden>로그아웃</button>
@@ -25,6 +25,38 @@
         <input id="password" type="password" placeholder="비밀번호" autocomplete="current-password">
         <button class="btn primary" type="submit">로그인</button>
       </form>
+    </section>
+  </main>
+
+  <nav class="tabs page-tabs" id="adminTabs" hidden>
+    <button class="tab active" data-view="board">문제 보드</button>
+    <button class="tab" data-view="players">플레이어 · 초기화</button>
+  </nav>
+
+  <!-- 플레이어 관리 / 초기화 -->
+  <main id="view-players" class="page" hidden>
+    <section class="card">
+      <div class="row-between">
+        <h2>플레이어 <span id="playerCount" class="muted"></span></h2>
+        <button id="playersRefresh" class="btn ghost small-btn">새로고침</button>
+      </div>
+      <p class="muted small">테스트 계정이나 부적절한 닉네임을 지울 수 있어요. 지우면 그 사람의 점수도 사라지고, 그 닉네임은 다시 쓸 수 있게 돼요.</p>
+      <table class="rank-table">
+        <thead><tr><th>닉네임</th><th>참여</th><th>맞힘</th><th class="r">점수</th><th></th></tr></thead>
+        <tbody id="playerBody"></tbody>
+      </table>
+      <p id="playerEmpty" class="muted" hidden>아직 등록한 플레이어가 없어요.</p>
+    </section>
+
+    <section class="card danger-zone">
+      <h2>⚠️ 전체 초기화</h2>
+      <p class="muted small">이벤트를 시작하기 전에 테스트 기록을 지울 때 쓰세요. <b>등록한 문제와 공개 상태는 그대로</b> 남아요. 되돌릴 수 없어요.</p>
+      <div class="actions">
+        <button id="resetScores" class="btn danger">점수만 초기화</button>
+        <button id="resetEverything" class="btn danger">플레이어까지 전부 초기화</button>
+      </div>
+      <p class="muted small">· <b>점수만 초기화</b>: 모든 풀이 기록과 점수가 지워져요. 닉네임은 남아서 플레이어가 그대로 다시 할 수 있어요.<br>
+        · <b>플레이어까지 전부 초기화</b>: 닉네임까지 모두 지워져요. 플레이어는 닉네임을 새로 등록해야 해요.</p>
     </section>
   </main>
 

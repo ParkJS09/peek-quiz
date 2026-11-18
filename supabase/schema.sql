@@ -1,5 +1,5 @@
 -- =====================================================================
--- 구멍 엿보기 퀴즈 — Supabase 스키마
+-- 탐정 도도란의 NPC 추리 게임 — Supabase 스키마
 -- Supabase 대시보드 > SQL Editor 에 통째로 붙여넣고 Run 하세요.
 -- 여러 번 실행해도 안전해요(데이터는 지워지지 않아요).
 --
@@ -60,6 +60,8 @@ create table if not exists public.plays (
   primary key (player_id, quiz_id)
 );
 create index if not exists plays_quiz_idx on public.plays (quiz_id);
+-- 오답 감점 누적(이전 버전 DB에도 컬럼을 추가해요)
+alter table public.plays add column if not exists penalty int not null default 0;
 
 alter table public.admins      enable row level security;
 alter table public.quizzes     enable row level security;
@@ -87,6 +89,26 @@ $$;
 create or replace function public._hash(t text) returns text
 language sql immutable as $$
   select encode(sha256(convert_to(t, 'UTF8')), 'hex')
+$$;
+
+-- ---------- 점수 규칙 (여기 숫자만 바꾸면 돼요) ----------
+-- 기본 점수: 구멍 n개 중 h개를 보고 맞히면 100 × (n − h + 1) / n
+create or replace function public._base_score(p_n int, p_h int) returns int
+language sql immutable as $$
+  select round(100.0 * (p_n - p_h + 1) / p_n)::int
+$$;
+
+-- 오답 1번 감점: 남은 구멍 수(지금 단계 포함). 구멍 5개면 힌트 1개일 때 -5, 2개 -4, … 5개 -1
+drop function if exists public._wrong_penalty(int);
+create or replace function public._wrong_penalty(p_n int, p_h int) returns int
+language sql immutable as $$
+  select greatest(1, p_n - p_h + 1)
+$$;
+
+-- 최종 점수: 기본 점수 − 누적 감점. 단, 맞히면 기본 점수의 10%(최소 1점)는 보장
+create or replace function public._final_score(p_base int, p_penalty int) returns int
+language sql immutable as $$
+  select greatest(p_base - p_penalty, greatest(1, round(p_base * 0.10)::int))
 $$;
 
 create or replace function public._player(p_token text) returns public.players
@@ -140,9 +162,12 @@ begin
     'wrong_count', p.wrong_count,
     'status',      p.status,
     'score',       p.score,
+    'penalty',     p.penalty,
     'score_now',   case when p.status = 'playing'
-                        then round(100.0 * (q.hole_count - p.hints_used + 1) / q.hole_count)::int
+                        then _final_score(_base_score(q.hole_count, p.hints_used), p.penalty)
                         else p.score end,
+    'wrong_cost',  case when p.status = 'playing'
+                        then _wrong_penalty(q.hole_count, p.hints_used) end,
     'answer',      case when p.status = 'playing' then null else q.answers[1] end,
     'image',       (select data from quiz_images where quiz_id = q.id and stage = v_stage)
   );
@@ -247,10 +272,11 @@ begin
 
   if v_ok then
     update plays set status = 'solved', finished_at = now(), last_guess_at = now(),
-           score = round(100.0 * (q.hole_count - hints_used + 1) / q.hole_count)::int
+           score = _final_score(_base_score(q.hole_count, hints_used), penalty)
      where player_id = v.id and quiz_id = q.id;
   else
-    update plays set wrong_count = wrong_count + 1, last_guess_at = now()
+    update plays set wrong_count = wrong_count + 1, last_guess_at = now(),
+           penalty = penalty + _wrong_penalty(q.hole_count, hints_used)
      where player_id = v.id and quiz_id = q.id;
   end if;
   return _play_state(v.id, q.id)::jsonb || jsonb_build_object('correct', v_ok);
@@ -397,6 +423,57 @@ begin
   delete from quizzes where id = p_quiz;
 end $$;
 
+-- ---------- 운영자: 초기화와 플레이어 관리 ----------
+
+-- 한 문제의 플레이 기록만 지워요(문제는 남아요). 기록이 없어지면 구멍/이미지도 다시 고칠 수 있어요.
+create or replace function public.admin_reset_quiz(p_quiz uuid) returns int
+language plpgsql volatile security definer set search_path = public as $$
+declare n int;
+begin
+  perform _require_admin();
+  delete from plays where quiz_id = p_quiz;
+  get diagnostics n = row_count;
+  return n;
+end $$;
+
+-- 전체 초기화: 모든 플레이 기록(점수)을 지워요. p_players가 true면 닉네임까지 지워요. 문제는 남아요.
+create or replace function public.admin_reset_all(p_players boolean) returns json
+language plpgsql volatile security definer set search_path = public as $$
+declare v_plays int; v_players int := 0;
+begin
+  perform _require_admin();
+  delete from plays where true;
+  get diagnostics v_plays = row_count;
+  if p_players then
+    delete from players where true;
+    get diagnostics v_players = row_count;
+  end if;
+  return json_build_object('plays', v_plays, 'players', v_players);
+end $$;
+
+create or replace function public.admin_list_players() returns json
+language plpgsql stable security definer set search_path = public as $$
+begin
+  perform _require_admin();
+  return coalesce((
+    select json_agg(r order by r.total desc, r.created_at) from (
+      select pl.id, pl.nickname, pl.created_at,
+             coalesce(sum(p.score), 0)::int                    as total,
+             count(p.quiz_id)::int                             as played,
+             count(*) filter (where p.status = 'solved')::int  as solved
+        from players pl left join plays p on p.player_id = pl.id
+       group by pl.id
+    ) r), '[]'::json);
+end $$;
+
+-- 플레이어 한 명 삭제(그 사람의 점수도 함께 지워져요)
+create or replace function public.admin_delete_player(p_player uuid) returns void
+language plpgsql volatile security definer set search_path = public as $$
+begin
+  perform _require_admin();
+  delete from players where id = p_player;
+end $$;
+
 -- ---------- 실행 권한 ----------
 -- 모든 함수의 기본 실행 권한을 걷어내고, 필요한 것만 다시 줘요.
 do $$
@@ -406,10 +483,11 @@ begin
     select p.oid::regprocedure as sig
       from pg_proc p join pg_namespace n on n.oid = p.pronamespace
      where n.nspname = 'public'
-       and p.proname in ('_norm', '_hash', '_player', '_is_admin', '_require_admin', '_open_quiz', '_play_state',
+       and p.proname in ('_norm', '_hash', '_base_score', '_wrong_penalty', '_final_score', '_player', '_is_admin', '_require_admin', '_open_quiz', '_play_state',
                          'register_player', 'me', 'list_quizzes', 'open_play', 'next_hint', 'submit_answer',
                          'give_up', 'leaderboard', 'admin_whoami', 'admin_list', 'admin_save_quiz',
-                         'admin_put_image', 'admin_get_image', 'admin_set_open', 'admin_delete_quiz')
+                         'admin_put_image', 'admin_get_image', 'admin_set_open', 'admin_delete_quiz',
+                         'admin_reset_quiz', 'admin_reset_all', 'admin_list_players', 'admin_delete_player')
   loop
     execute format('revoke all on function %s from public, anon, authenticated', f.sig);
   end loop;
@@ -425,5 +503,7 @@ grant execute on function
   public.admin_whoami(), public.admin_list(),
   public.admin_save_quiz(uuid, int, int, text, jsonb, jsonb),
   public.admin_put_image(uuid, int, text), public.admin_get_image(uuid, int),
-  public.admin_set_open(uuid, boolean), public.admin_delete_quiz(uuid)
+  public.admin_set_open(uuid, boolean), public.admin_delete_quiz(uuid),
+  public.admin_reset_quiz(uuid), public.admin_reset_all(boolean),
+  public.admin_list_players(), public.admin_delete_player(uuid)
   to authenticated;

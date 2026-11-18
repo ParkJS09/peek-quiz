@@ -1,0 +1,12 @@
+{
+  "name": "peek-quiz-dev",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "mock": "node mock-server.mjs",
+    "test": "node test-db.mjs"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "0.2.17"
+  }
+}

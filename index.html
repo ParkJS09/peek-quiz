@@ -9,94 +9,99 @@
 <body>
   <header class="top">
     <h1>🔍 구멍 엿보기 퀴즈</h1>
-    <nav class="tabs" role="tablist">
-      <button class="tab active" data-view="edit" role="tab">만들기</button>
-      <button class="tab" data-view="play" role="tab" id="tabPlay" disabled>플레이</button>
-    </nav>
+    <button id="meChip" class="me-chip" hidden></button>
   </header>
 
-  <!-- ===== 만들기 ===== -->
-  <main id="view-edit" class="view">
-    <section class="stage-wrap">
-      <label id="dropzone" class="dropzone">
-        <input type="file" id="fileInput" accept="image/*" hidden>
-        <div class="dz-icon">🖼️</div>
-        <div class="dz-title">이미지를 끌어다 놓거나 클릭해서 고르세요</div>
-        <div class="dz-sub">Ctrl+V(⌘+V)로 붙여넣기도 돼요</div>
-      </label>
-      <div id="editorBox" class="canvas-box" hidden>
-        <canvas id="editCanvas"></canvas>
-      </div>
-      <p id="editHint" class="hint" hidden>
-        <b>클릭</b>하면 구멍 추가 · <b>드래그</b>로 이동 · 구멍 위에서 <b>휠</b>로 크기 조절 · <b>Delete</b>로 삭제<br>
-        번호 순서대로 하나씩 열려요. 어려운 부분부터 찍는 게 좋아요.
-      </p>
+  <nav class="tabs page-tabs" id="mainTabs" hidden>
+    <button class="tab active" data-view="list">문제</button>
+    <button class="tab" data-view="rank">랭킹</button>
+  </nav>
+
+  <!-- 닉네임 등록 -->
+  <main id="view-join" class="page narrow" hidden>
+    <section class="card join">
+      <div class="join-icon">🕳️👀</div>
+      <h2>닉네임을 정하고 시작하세요</h2>
+      <p class="muted">구멍으로 살짝 보이는 그림이 무엇인지 맞히는 게임이에요.<br>힌트(구멍)를 적게 볼수록 점수가 높아요.</p>
+      <form id="joinForm" class="stack">
+        <input id="nickInput" type="text" maxlength="12" placeholder="닉네임 (2~12자)" autocomplete="off">
+        <button class="btn primary" type="submit">시작하기</button>
+      </form>
+      <details class="recover">
+        <summary>다른 기기에서 하던 걸 이어서 할래요</summary>
+        <form id="recoverForm" class="stack">
+          <input id="recoverInput" type="text" placeholder="복구 코드 붙여넣기" autocomplete="off">
+          <button class="btn" type="submit">이어하기</button>
+        </form>
+      </details>
     </section>
-
-    <aside class="panel">
-      <div class="field">
-        <label for="answerInput">정답</label>
-        <input id="answerInput" type="text" placeholder="예: 광부 유령, 유령광부" autocomplete="off">
-        <small>여러 개면 쉼표로 구분하세요. 띄어쓰기와 대소문자는 무시하고 채점해요.</small>
-      </div>
-
-      <div class="field">
-        <label for="radius">구멍 크기 <span id="radiusLabel" class="muted"></span></label>
-        <input id="radius" type="range" min="2" max="30" step="0.5" value="8">
-        <small id="radiusHelp">새로 찍을 구멍의 크기예요.</small>
-      </div>
-
-      <div class="field">
-        <div class="row-between">
-          <label>구멍 목록 (공개 순서)</label>
-          <button id="clearHoles" class="link" disabled>전부 지우기</button>
-        </div>
-        <ol id="holeList" class="hole-list"></ol>
-        <p id="holeEmpty" class="muted small">아직 구멍이 없어요. 이미지 위를 클릭하세요.</p>
-      </div>
-
-      <div class="actions">
-        <button id="startBtn" class="btn primary" disabled>▶ 플레이</button>
-        <button id="exportBtn" class="btn" disabled>⬇ 힌트 이미지 저장</button>
-        <button id="changeImg" class="btn ghost" hidden>다른 이미지</button>
-      </div>
-      <small class="muted">힌트 이미지 저장: 단계별 PNG와 정답 PNG를 내려받아요. 게시판이나 디스코드에 하나씩 올릴 때 쓰세요.</small>
-    </aside>
   </main>
 
-  <!-- ===== 플레이 ===== -->
+  <!-- 문제 목록 -->
+  <main id="view-list" class="page" hidden>
+    <div id="dayList" class="day-list"></div>
+  </main>
+
+  <!-- 문제 풀기 -->
   <main id="view-play" class="view" hidden>
     <section class="stage-wrap">
       <div class="canvas-box play-box" id="playBox">
-        <canvas id="playCanvas"></canvas>
+        <img id="playImg" alt="퀴즈 이미지">
       </div>
     </section>
-
     <aside class="panel">
+      <div class="muted small" id="playTitle"></div>
       <div class="stage-label" id="stageLabel"></div>
       <div class="steps" id="steps"></div>
       <div class="score-box">
-        <div class="muted small" id="scoreCaption">지금 맞히면</div>
+        <div class="muted small" id="scoreCaption"></div>
         <div class="score" id="score"></div>
       </div>
-
       <form id="guessForm" class="guess">
         <input id="guessInput" type="text" placeholder="정답을 입력하세요" autocomplete="off">
         <button class="btn primary" type="submit">제출</button>
       </form>
-      <p id="hostNote" class="muted small" hidden>정답을 등록하지 않아서 진행자 모드로 진행돼요. 참가자는 말이나 채팅으로 맞히면 돼요.</p>
       <div id="feedback" class="feedback" aria-live="polite"></div>
-
       <div class="actions">
         <button id="nextBtn" class="btn">다음 힌트 →</button>
-        <button id="revealBtn" class="btn ghost">정답 공개</button>
-        <button id="retryBtn" class="btn" hidden>↺ 다시 하기</button>
-        <button id="backBtn" class="btn ghost">← 편집으로</button>
+        <button id="giveUpBtn" class="btn ghost">포기하고 정답 보기</button>
+        <button id="backBtn" class="btn ghost">← 목록으로</button>
       </div>
     </aside>
   </main>
 
-  <div id="toast" class="toast" hidden></div>
-  <script src="app.js"></script>
+  <!-- 랭킹 -->
+  <main id="view-rank" class="page narrow" hidden>
+    <section class="card">
+      <div class="row-between">
+        <h2>🏆 랭킹</h2>
+        <button id="rankRefresh" class="btn ghost small-btn">새로고침</button>
+      </div>
+      <table class="rank-table">
+        <thead><tr><th>순위</th><th>닉네임</th><th>맞힌 문제</th><th>점수</th></tr></thead>
+        <tbody id="rankBody"></tbody>
+      </table>
+      <p id="rankEmpty" class="muted" hidden>아직 정답자가 없어요. 첫 번째 주인공이 되어 보세요!</p>
+    </section>
+  </main>
+
+  <!-- 내 정보 -->
+  <dialog id="meDialog" class="dialog">
+    <h3 id="meName"></h3>
+    <p class="muted small">총점 <b id="meTotal"></b> · 맞힌 문제 <b id="meSolved"></b>개</p>
+    <label class="small">복구 코드 (다른 기기에서 이어할 때 필요해요. 남에게 보여주지 마세요)</label>
+    <div class="code-row">
+      <input id="meCode" type="text" readonly>
+      <button id="copyCode" class="btn">복사</button>
+    </div>
+    <div class="actions">
+      <button id="logoutBtn" class="btn ghost">이 기기에서 로그아웃</button>
+      <button id="closeMe" class="btn primary">닫기</button>
+    </div>
+  </dialog>
+
+  <script src="config.js"></script>
+  <script src="common.js"></script>
+  <script src="player.js"></script>
 </body>
 </html>

@@ -103,7 +103,7 @@ b { font-weight: 600; }
   box-shadow: inset 0 0 0 1px var(--border);
 }
 .lens-face {
-  position: absolute; left: -16px; top: -19px; width: 73px; height: 85px;
+  position: absolute; left: -7px; top: -9px; width: 54px; height: 79px;
   image-rendering: pixelated; transition: translate .25s ease-out;
 }
 .brand-bubble {
@@ -232,7 +232,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .join { text-align: center; padding: 40px 32px 32px; }
 .join h2 { font-size: 26px; }
 .join p { margin: 8px 0 0; }
-.join-avatar { display: block; width: 110px; height: 128px; margin: 0 auto 18px; image-rendering: pixelated; }
+.join-avatar { display: block; width: 108px; height: 158px; margin: 0 auto 18px; image-rendering: pixelated; }
 .join .btn.primary { padding: 12px 18px; font-size: 15px; }
 .recover { margin-top: 22px; text-align: left; font-size: 13px; color: var(--muted); }
 .recover summary { cursor: pointer; text-align: center; }
@@ -403,7 +403,7 @@ button.tile:active:not(:disabled) { transform: scale(.98); }
   text-align: center; box-shadow: var(--shadow-lg); cursor: default;
   animation: cardIn .5s cubic-bezier(.2, .9, .3, 1.25);
 }
-.cele-avatar { width: 110px; height: 128px; image-rendering: pixelated; animation: hop .8s ease-out .25s 2; }
+.cele-avatar { width: 108px; height: 158px; image-rendering: pixelated; animation: hop .8s ease-out .25s 2; }
 .cele-bubble { display: flex; flex-direction: column; gap: 2px; max-width: 280px; }
 .cele-bubble b { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
 .cele-bubble span { font-size: 14px; color: var(--muted); }

@@ -8,7 +8,13 @@
 </head>
 <body>
   <header class="top">
-    <h1 class="brand"><img src="assets/dodoran.png" alt="" class="brand-avatar">탐정 도도란의 NPC 추리 게임</h1>
+    <div class="brand">
+      <button type="button" class="lens" id="brandLens" aria-label="도도란에게 말 걸기">
+        <span class="lens-glass"><img src="assets/dodoran.png" alt="" class="lens-face" id="lensFace" width="73" height="85"></span>
+      </button>
+      <h1 class="brand-text"><small>탐정 도도란의</small><strong>NPC 추리 게임</strong></h1>
+      <div class="brand-bubble" id="brandBubble" role="status" hidden></div>
+    </div>
     <button id="meChip" class="me-chip" hidden></button>
   </header>
 

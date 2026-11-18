@@ -226,3 +226,92 @@ function showConfigWarning() {
   div.innerHTML = '⚙️ 아직 Supabase가 연결되지 않았어요. <code>config.js</code>에 프로젝트 URL과 anon key를 넣어 주세요. (SETUP.md 참고)';
   document.body.prepend(div);
 }
+
+// ---------- 상단 브랜드: 돋보기 속 도도란 ----------
+// 마우스를 따라 렌즈 속 얼굴이 살짝 움직이고, 클릭하면 말풍선으로 한마디 해요.
+// lines/greeting 안의 {탐정}은 "닉네임 탐정님"(닉네임이 없으면 "탐정님")으로 바뀌어요.
+// getName: 지금 플레이어 닉네임을 돌려주는 함수(없으면 생략)
+function initBrand(lines, greeting, getName = () => null) {
+  const lens = $('#brandLens');
+  const face = $('#lensFace');
+  const bubble = $('#brandBubble');
+  if (!lens || !face || !bubble) return;
+  const CLICKED_KEY = 'peekquiz.lensClicked';
+  let timer;
+  let nudgeTimer;
+  let last = -1;
+
+  const store = {
+    get(k, area = localStorage) { try { return area.getItem(k); } catch { return null; } },
+    set(k, v, area = localStorage) { try { area.setItem(k, v); } catch { /* 저장이 막혀도 동작 */ } },
+  };
+
+  const title = () => {
+    const name = getName();
+    return name ? `${name} 탐정님` : '탐정님';
+  };
+  const fill = (text) => text.replaceAll('{탐정}', title());
+
+  const say = (text, ms = 2800) => {
+    bubble.textContent = fill(text);
+    bubble.hidden = false;
+    bubble.style.animation = 'none';
+    void bubble.offsetWidth;
+    bubble.style.animation = '';
+    clearTimeout(timer);
+    timer = setTimeout(() => { bubble.hidden = true; }, ms);
+  };
+
+  // 아직 한 번도 안 눌러 본 사람에게: 물결 + 흔들림 + "눌러 보세요" 말풍선
+  let nudging = store.get(CLICKED_KEY) !== '1';
+  const stopNudge = () => {
+    if (!nudging) return;
+    nudging = false;
+    lens.classList.remove('nudge');
+    bubble.classList.remove('nudge-bubble');
+    clearTimeout(nudgeTimer);
+    store.set(CLICKED_KEY, '1');
+  };
+
+  lens.addEventListener('click', () => {
+    stopNudge();
+    bubble.classList.remove('nudge-bubble');
+    let i;
+    do { i = Math.floor(Math.random() * lines.length); } while (lines.length > 1 && i === last);
+    last = i;
+    say(lines[i]);
+  });
+  // 말풍선을 눌러도 도도란을 누른 것과 같아요
+  bubble.addEventListener('click', () => lens.click());
+
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    window.addEventListener('pointermove', (e) => {
+      const r = lens.getBoundingClientRect();
+      const dx = e.clientX - (r.left + r.width / 2);
+      const dy = e.clientY - (r.top + r.height / 2);
+      const d = Math.hypot(dx, dy) || 1;
+      const k = Math.min(1, d / 300) * 4; // 최대 4px
+      face.style.translate = `${(dx / d) * k}px ${(dy / d) * k}px`;
+    }, { passive: true });
+  }
+
+  const firstVisit = store.get('peekquiz.greeted', sessionStorage) !== '1';
+  store.set('peekquiz.greeted', '1', sessionStorage);
+
+  if (nudging) {
+    lens.classList.add('nudge');
+    const showNudge = (text, ms) => {
+      if (!nudging) return;
+      say(text, ms);
+      bubble.classList.add('nudge-bubble');
+    };
+    setTimeout(() => showNudge(
+      `${firstVisit && greeting ? `${greeting}\n` : ''}저를 눌러 보세요! 👆 추리 팁을 알려드릴게요.`, 7000), 700);
+    // 그래도 안 누르면 잠시 뒤 한 번 더 살짝 알려줘요
+    nudgeTimer = setTimeout(() => showNudge('저 여기 있어요! 눌러 보세요 👆', 4000), 25000);
+  } else if (greeting && firstVisit) {
+    setTimeout(() => say(greeting), 700);
+  }
+
+  return { say: (text, ms) => { if (!nudging) bubble.classList.remove('nudge-bubble'); say(text, ms); } };
+}

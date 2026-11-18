@@ -542,6 +542,11 @@ $('#nextStage').addEventListener('click', () => { pv.stage += 1; renderPreview()
 $('#closePreview').addEventListener('click', () => $('#previewDialog').close());
 
 // ---------- 시작 ----------
+initBrand([
+  '어려운 단서부터 열리게 순서를 정해 보세요!',
+  '공개는 그날 아침에 잊지 말고요!',
+  '수사본부는 오늘도 바쁘네요.',
+]);
 if (!isConfigured()) {
   showConfigWarning();
   show('login');

@@ -51,7 +51,7 @@ $('#joinForm').addEventListener('submit', async (e) => {
   try {
     const r = await rpc('register_player', { p_nickname: nick });
     savePlayer({ token: r.token, nickname: r.nickname });
-    toast(`환영해요, ${r.nickname}님!`);
+    brand?.say('반가워요, {탐정}! 첫 사건을 골라 보세요. 🔍', 3500);
     openList();
   } catch (err) { handleError(err); }
 });
@@ -63,7 +63,7 @@ $('#recoverForm').addEventListener('submit', async (e) => {
   try {
     const me = await rpc('me', { p_token: token });
     savePlayer({ token, nickname: me.nickname });
-    toast(`${me.nickname}님, 다시 오셨네요!`);
+    brand?.say('다시 오셨네요, {탐정}! 이어서 수사해 볼까요?', 3500);
     openList();
   } catch (err) { toast(err.message); }
 });
@@ -302,6 +302,15 @@ async function openRank() {
 $('#rankRefresh').addEventListener('click', openRank);
 
 // ---------- 시작 ----------
+const brand = initBrand([
+  '{탐정}, 단서는 적게 볼수록 점수가 커요!',
+  '틀리면 감점! 확신이 들 때 제출하세요.',
+  '구멍 하나에도 결정적인 단서가 숨어 있어요.',
+  '이 사건… 냄새가 나는군요. 🔍',
+  '랭킹 1위 탐정은 {탐정}이 될 수도 있어요!',
+  '띄어쓰기는 신경 쓰지 않아도 돼요!',
+  '{탐정}의 추리력을 믿고 있어요.',
+], '어서 와요, {탐정}! 오늘의 사건이 기다리고 있어요.', () => player?.nickname);
 if (!isConfigured()) {
   showConfigWarning();
   show('join');

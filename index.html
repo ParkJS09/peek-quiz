@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>구멍 엿보기 퀴즈</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="top">
+    <h1>🔍 구멍 엿보기 퀴즈</h1>
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-view="edit" role="tab">만들기</button>
+      <button class="tab" data-view="play" role="tab" id="tabPlay" disabled>플레이</button>
+    </nav>
+  </header>
+
+  <!-- ===== 만들기 ===== -->
+  <main id="view-edit" class="view">
+    <section class="stage-wrap">
+      <label id="dropzone" class="dropzone">
+        <input type="file" id="fileInput" accept="image/*" hidden>
+        <div class="dz-icon">🖼️</div>
+        <div class="dz-title">이미지를 끌어다 놓거나 클릭해서 고르세요</div>
+        <div class="dz-sub">Ctrl+V(⌘+V)로 붙여넣기도 돼요</div>
+      </label>
+      <div id="editorBox" class="canvas-box" hidden>
+        <canvas id="editCanvas"></canvas>
+      </div>
+      <p id="editHint" class="hint" hidden>
+        <b>클릭</b>하면 구멍 추가 · <b>드래그</b>로 이동 · 구멍 위에서 <b>휠</b>로 크기 조절 · <b>Delete</b>로 삭제<br>
+        번호 순서대로 하나씩 열려요. 어려운 부분부터 찍는 게 좋아요.
+      </p>
+    </section>
+
+    <aside class="panel">
+      <div class="field">
+        <label for="answerInput">정답</label>
+        <input id="answerInput" type="text" placeholder="예: 광부 유령, 유령광부" autocomplete="off">
+        <small>여러 개면 쉼표로 구분하세요. 띄어쓰기와 대소문자는 무시하고 채점해요.</small>
+      </div>
+
+      <div class="field">
+        <label for="radius">구멍 크기 <span id="radiusLabel" class="muted"></span></label>
+        <input id="radius" type="range" min="2" max="30" step="0.5" value="8">
+        <small id="radiusHelp">새로 찍을 구멍의 크기예요.</small>
+      </div>
+
+      <div class="field">
+        <div class="row-between">
+          <label>구멍 목록 (공개 순서)</label>
+          <button id="clearHoles" class="link" disabled>전부 지우기</button>
+        </div>
+        <ol id="holeList" class="hole-list"></ol>
+        <p id="holeEmpty" class="muted small">아직 구멍이 없어요. 이미지 위를 클릭하세요.</p>
+      </div>
+
+      <div class="actions">
+        <button id="startBtn" class="btn primary" disabled>▶ 플레이</button>
+        <button id="exportBtn" class="btn" disabled>⬇ 힌트 이미지 저장</button>
+        <button id="changeImg" class="btn ghost" hidden>다른 이미지</button>
+      </div>
+      <small class="muted">힌트 이미지 저장: 단계별 PNG와 정답 PNG를 내려받아요. 게시판이나 디스코드에 하나씩 올릴 때 쓰세요.</small>
+    </aside>
+  </main>
+
+  <!-- ===== 플레이 ===== -->
+  <main id="view-play" class="view" hidden>
+    <section class="stage-wrap">
+      <div class="canvas-box play-box" id="playBox">
+        <canvas id="playCanvas"></canvas>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <div class="stage-label" id="stageLabel"></div>
+      <div class="steps" id="steps"></div>
+      <div class="score-box">
+        <div class="muted small" id="scoreCaption">지금 맞히면</div>
+        <div class="score" id="score"></div>
+      </div>
+
+      <form id="guessForm" class="guess">
+        <input id="guessInput" type="text" placeholder="정답을 입력하세요" autocomplete="off">
+        <button class="btn primary" type="submit">제출</button>
+      </form>
+      <p id="hostNote" class="muted small" hidden>정답을 등록하지 않아서 진행자 모드로 진행돼요. 참가자는 말이나 채팅으로 맞히면 돼요.</p>
+      <div id="feedback" class="feedback" aria-live="polite"></div>
+
+      <div class="actions">
+        <button id="nextBtn" class="btn">다음 힌트 →</button>
+        <button id="revealBtn" class="btn ghost">정답 공개</button>
+        <button id="retryBtn" class="btn" hidden>↺ 다시 하기</button>
+        <button id="backBtn" class="btn ghost">← 편집으로</button>
+      </div>
+    </aside>
+  </main>
+
+  <div id="toast" class="toast" hidden></div>
+  <script src="app.js"></script>
+</body>
+</html>
